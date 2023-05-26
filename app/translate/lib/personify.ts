@@ -9,11 +9,12 @@ const instance = new OpenAIApi(
 )
 
 export async function personify(text: string, targetPersonality: string) {
-  const prompt = `Convert the following text to the voice of ${targetPersonality}: ${text}`
+  const prompt = `Convert the following text to the voice of ${targetPersonality}.\n\n${text}`
 
   const response = await instance.createCompletion({
     prompt,
-    model: "text-davinci-003",
+    model: "text-davinci-002",
+    max_tokens: 256,
   })
 
   // TODO: handle response properly. and is createCompletion the right method here?

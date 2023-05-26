@@ -9,12 +9,15 @@ const instance = new OpenAIApi(
 )
 
 export async function personify(text: string, targetPersonality: string) {
-  const prompt = `Convert the following text to the voice of ${targetPersonality}.\n\n${text}`
+  //const prompt = `Convert the following text to the voice of ${targetPersonality}.\n\n${text}`
+  const prompt = `Convert the following text to the voice of a ${targetPersonality}.\n\n${text}`
+
+  // FIXME: issues with line breaks here. should the prompt be an array?
 
   const response = await instance.createCompletion({
     prompt,
-    model: "text-davinci-002",
-    max_tokens: 256,
+    model: "text-davinci-003",
+    max_tokens: 2000,
   })
 
   // TODO: handle response properly. and is createCompletion the right method here?

@@ -22,7 +22,7 @@ async function fetchTranslatedText(
   targetPersonality: string,
   inputLang: string | null
 ) {
-  const res = await fetch("http://localhost:3000/translate", {
+  const res = await fetch(`${process.env.API_PATH}/translate`, {
     method: "POST",
     body: JSON.stringify({
       text,

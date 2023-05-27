@@ -1,180 +1,128 @@
 "use client"
 
-import { useRef, useState } from "react"
-import useAsyncCallback from "../hooks/useAsyncCallback"
-import { Language, TranslatedText } from "./types"
-import LayoutStack from "../components/layout-stack"
-import Button from "../components/button"
-import LanguageSelector from "./language-selector"
-import { IoMdClose } from "react-icons/io"
-import Dropdown from "../components/dropdown"
+import { ReactNode, useCallback, useRef } from "react"
+import { cx } from "class-variance-authority"
+import { IoClose } from "react-icons/io5"
+import FadeIn from "@/app/components/fade-in"
+import Button from "@/app/components/button"
+import Dropdown from "@/app/components/dropdown"
+import {
+  useTranslatorDispatch,
+  useTranslatorSource,
+  useTranslatorTarget,
+} from "@/app/translate/provider"
+import personalityDefaults from "@/app/translate/personalities.json"
 
-const personalitites = [
-  "Appalachian Hillbilly",
-  "California Valley Girl",
-  "Cajun",
-  "Surfer Bro",
-]
+const MAX_SOURCE_TEXT_LENGTH = 5000
 
-async function fetchTranslatedText(
-  text: string,
-  targetLang: string,
-  targetPersonality: string,
-  inputLang: string | null
-) {
-  const res = await fetch(`/translate`, {
-    method: "POST",
-    body: JSON.stringify({
-      text,
-      targetLang,
-      targetPersonality,
-      inputLang: inputLang,
-    }),
-  })
+export const bodyClasses =
+  "border-4 p-2 pr-0 md:p-3 md:pr-0 lg:p-4 lg:pr-0 flex items-start flex-1"
 
-  const json = await res.json()
-  return json.data as TranslatedText
-}
+export function ClickableBody({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null)
 
-export default function TranslatorClient({
-  languages,
-}: {
-  languages: Language[]
-}) {
-  const [inputText, setInputText] = useState("")
-  const [inputLang, setInputLang] = useState<Language>({
-    language: "de",
-    name: "German",
-  }) // null when auto detecting
-  const [targetLang, setTargetLang] = useState<Language>({
-    language: "en",
-    name: "English",
-  })
-  const [targetPersonality, setTargetPersonality] = useState<string>("Cajun")
-
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const handleChange = (value: string) => {
-    setInputText(value)
-  }
-
-  // FIXME: why is being executed when targetPersonality changes?
-  const [executeTranslate, translateState] =
-    useAsyncCallback(fetchTranslatedText)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    executeTranslate(
-      inputText,
-      targetLang.language,
-      targetPersonality,
-      inputLang?.language ?? null
-    )
-  }
+  const focusChildTextarea = useCallback(() => {
+    ref.current?.querySelector("textarea")?.focus()
+  }, [])
 
   return (
-    <LayoutStack as="form" onSubmit={handleSubmit}>
-      <div>
-        <div className="flex items-center pl-2">
-          <div className="flex-1">
-            <LanguageSelector
-              languages={languages}
-              selectedLanguage={inputLang}
-              onSelect={setInputLang}
-            />
-          </div>
-          <div className="py-1">
-            <Button type="submit" size="sm">
-              Translate
-            </Button>
-          </div>
-        </div>
-        <div className="border rounded-lg relative pt-4 pl-2">
-          <Button
-            type="reset"
-            className="absolute top-2 right-1 p-4 flex justify-center items-center aspect-square rounded-full"
-            onClick={() => setInputText("")}
+    <div
+      ref={ref}
+      className={cx(bodyClasses, "cursor-text")}
+      onClick={focusChildTextarea}
+    >
+      {children}
+    </div>
+  )
+}
+
+export function Textarea() {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  const { text } = useTranslatorSource()
+  const dispatch = useTranslatorDispatch()
+
+  const handleChange = useCallback(
+    (val: string) => dispatch({ type: "setSourceText", payload: val }),
+    [dispatch]
+  )
+
+  return (
+    <textarea
+      ref={ref}
+      value={text}
+      maxLength={MAX_SOURCE_TEXT_LENGTH}
+      onChange={(e) => handleChange(e.target.value)}
+      className="w-full bg-transparent resize-none overflow-y-hidden min-h-[4rem] focus:outline-none"
+      style={{
+        height: ref.current?.scrollHeight,
+      }}
+    />
+  )
+}
+
+export function ClearInputTextButton() {
+  const { text } = useTranslatorSource()
+  const dispatch = useTranslatorDispatch()
+
+  return (
+    <FadeIn show={!!text.length}>
+      <button
+        type="reset"
+        className="rounded-full p-2 hover:bg-gray-50"
+        onClick={() => dispatch({ type: "setSourceText", payload: "" })}
+      >
+        <IoClose />
+      </button>
+    </FadeIn>
+  )
+}
+
+export function SourceLengthLabel() {
+  const { text } = useTranslatorSource()
+
+  return (
+    <span className="text-sm">
+      {text.length} / {MAX_SOURCE_TEXT_LENGTH}
+    </span>
+  )
+}
+
+export function SubmitButton() {
+  const { text } = useTranslatorSource()
+  const dispatch = useTranslatorDispatch()
+
+  return (
+    <Button type="button" disabled={!text.length} onClick={console.log}>
+      Translate
+    </Button>
+  )
+}
+
+export function PersonalitiesDropdown() {
+  const { personality } = useTranslatorTarget()
+  const dispatch = useTranslatorDispatch()
+
+  const handleSelect = useCallback(
+    (personality: string) =>
+      dispatch({ type: "setTargetPersonality", payload: personality }),
+    [dispatch]
+  )
+
+  return (
+    <Dropdown>
+      <Dropdown.Trigger>{personality}</Dropdown.Trigger>
+      <Dropdown.Items>
+        {personalityDefaults.personalities.map((item) => (
+          <Dropdown.Item
+            key={item}
+            selected={item === personality}
+            onClick={() => handleSelect(item)}
           >
-            <IoMdClose />
-          </Button>
-          <textarea
-            ref={textareaRef}
-            className="w-11/12 h-5/6 bg-transparent resize-none min-h-[6rem] overflow-y-hidden focus:outline-none"
-            value={inputText}
-            onChange={(e) => handleChange(e.target.value)}
-            maxLength={5000}
-            style={{
-              height: textareaRef.current?.scrollHeight,
-            }}
-          />
-          <div className="py-2 px-5 flex justify-end">
-            {inputText.length} / 5000
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col h-full">
-        <div className="flex items-center pl-2">
-          <div className="flex-1">
-            <LanguageSelector
-              languages={languages}
-              selectedLanguage={targetLang}
-              onSelect={setTargetLang}
-            />
-          </div>
-          <div className="py-1">
-            <Dropdown>
-              <Dropdown.Trigger>{targetPersonality}</Dropdown.Trigger>
-              <Dropdown.Items>
-                {personalitites.map((personality) => (
-                  <Dropdown.Item
-                    key={personality}
-                    selected={personality === targetPersonality}
-                    onClick={() => setTargetPersonality(personality)}
-                  >
-                    {personality}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Items>
-            </Dropdown>
-            {/* <Menu as="div" className="relative inline-block text-left">
-              <Menu.Button as={Button} size="sm">
-                {targetPersonality}
-                <BsChevronDown className="ml-2" />
-              </Menu.Button>
-              <Transition
-                as={Fragment}
-                enter="transition ease-out duration-100"
-                enterFrom="transform opacity-0 scale-95"
-                enterTo="transform opacity-100 scale-100"
-                leave="transition ease-in duration-75"
-                leaveFrom="transform opacity-100 scale-100"
-                leaveTo="transform opacity-0 scale-95"
-              >
-                <Menu.Items className="absolute right-0 mt-2 w-56 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-                  {personalitites.map((personality) => (
-                    <div key={personality} className="px-1 py-1 ">
-                      <Menu.Item>
-                        <button
-                          className="text-gray-900 group flex w-full items-center rounded-md px-2 py-2 text-sm"
-                          onClick={() => setTargetPersonality(personality)}
-                        >
-                          {personality}
-                        </button>
-                      </Menu.Item>
-                    </div>
-                  ))}
-                </Menu.Items>
-              </Transition>
-            </Menu> */}
-          </div>
-        </div>
-        <div className="border rounded-lg py-4 px-2 flex-grow">
-          <span>
-            {translateState.status === "success"
-              ? translateState.value.translatedText
-              : null}
-          </span>
-        </div>
-      </div>
-    </LayoutStack>
+            {item}
+          </Dropdown.Item>
+        ))}
+      </Dropdown.Items>
+    </Dropdown>
   )
 }

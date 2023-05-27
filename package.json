@@ -26,6 +26,7 @@
     "react-icons": "^4.8.0",
     "server-only": "^0.0.1",
     "tailwindcss": "3.3.2",
+    "tailwindcss-fluid-type": "^2.0.3",
     "typescript": "5.0.4"
   }
 }

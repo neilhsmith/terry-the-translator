@@ -3,18 +3,18 @@ const theme = {
     currentColor: "currentColor",
     transparent: "transparent",
 
-    black: "#333333",
-    white: "#FFFFFF",
-
+    black: "#000",
+    white: "#FFF",
     gray: {
-      50: "#F1F1F1",
-      100: "#CFCFCF",
-      200: "#616161",
-      300: "#424242",
+      50: "#F9FAFB",
     },
   },
+  container: {
+    padding: ".5rem",
+  },
   fontFamily: {
-    sans: "var(--font-inter)",
+    // https://github.com/system-fonts/modern-font-stacks#humanist
+    sans: "Seravek, 'Gill Sans Nova', Ubuntu, Calibri, 'DejaVu Sans', source-sans-pro, sans-serif;",
   },
 }
 

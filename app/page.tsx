@@ -1,14 +1,13 @@
-import { Suspense } from "react"
+import HomeCTA from "@/app/cta"
 import Translator from "@/app/translate/translator"
-import Loading from "@/app/loading"
 
 export default function Home() {
   return (
-    <main id="main" role="main">
-      <Suspense fallback={<Loading />}>
-        {/* @ts-expect-error async server component */}
+    <>
+      <HomeCTA />
+      <main id="main" role="main" className="py-16">
         <Translator />
-      </Suspense>
-    </main>
+      </main>
+    </>
   )
 }

@@ -1,16 +1,87 @@
-import "server-only"
-import TranslatorClient from "./client"
-import { getLanguages } from "./lib/translate"
+import { ReactNode } from "react"
+import TranslatorProvider from "@/app/translate/provider"
+import LayoutGrid from "@/app/translate/layout"
+import {
+  bodyClasses,
+  ClearInputTextButton,
+  ClickableBody,
+  PersonalitiesDropdown,
+  SourceLengthLabel,
+  SubmitButton,
+  Textarea,
+} from "@/app/translate/client"
 
-// async function getLanguages() {
-//   const res = await fetch(`${process.env.API_PATH}/translate`)
-//   if (!res.ok) throw new Error("Failed to fetch languages")
-//   const json = await res.json()
-//   return json.data
-// }
+export default function Translator() {
+  return (
+    <TranslatorProvider>
+      <LayoutGrid>
+        <Controller />
+        <Results />
+      </LayoutGrid>
+    </TranslatorProvider>
+  )
+}
 
-export default async function Translator() {
-  const languages = await getLanguages()
+export function Controller() {
+  return (
+    <>
+      <Header>
+        <div>languages</div>
+        <SubmitButton />
+      </Header>
+      <ClickableBody>
+        <Content>
+          <Textarea />
+          <Actions>
+            <SourceLengthLabel />
+          </Actions>
+        </Content>
+        <MainAction>
+          <ClearInputTextButton />
+        </MainAction>
+      </ClickableBody>
+    </>
+  )
+}
 
-  return <TranslatorClient languages={languages} />
+export function Results() {
+  return (
+    <div className="flex flex-col h-full">
+      <Header>
+        <div>languages</div>
+        <PersonalitiesDropdown />
+      </Header>
+      <Body>
+        <Content>
+          <div className="border flex-1">results</div>
+          <Actions>actions</Actions>
+        </Content>
+        <MainAction>
+          <button>h</button>
+        </MainAction>
+      </Body>
+    </div>
+  )
+}
+
+function Header({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between mb-2">{children}</div>
+  )
+}
+
+export function Body({ children }: { children: ReactNode }) {
+  return <div className={bodyClasses}>{children}</div>
+}
+
+function Content({ children }: { children: ReactNode }) {
+  return <div className="flex-1 flex flex-col h-full">{children}</div>
+}
+
+function MainAction({ children }: { children: ReactNode }) {
+  return <div className="-mt-2 w-8 md:w-10 lg:w-12 text-center">{children}</div>
+}
+
+function Actions({ children }: { children: ReactNode }) {
+  return <div className="flex items-center justify-end mt-4">{children}</div>
 }

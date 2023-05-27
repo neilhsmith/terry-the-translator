@@ -72,8 +72,7 @@ function Items({ children }: PropsWithChildren<{}>) {
     >
       <Menu.Items
         className={cx(
-          "absolute right-0 mt-2 w-56 bg-white border-4 focus:outline-none z-50",
-          "drop-shadow-[-.35rem_.65rem_1px_rgba(0,0,0,.4)]",
+          "absolute right-0 mt-2 w-56 divide-y divide-gray-50 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50",
           {
             "w-full": fluid,
             "columns-7": fluid,
@@ -97,7 +96,7 @@ function Item({
     <Menu.Item>
       <button
         type="button"
-        className="group flex w-full items-center px-2 py-2 hover:bg-gray-50 whitespace-nowrap"
+        className="group flex w-full items-center px-2 py-2 hover:bg-gray-50"
         onClick={onClick}
       >
         {selected ? <BsCheck className="mr-2" /> : null}

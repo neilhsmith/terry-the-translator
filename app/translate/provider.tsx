@@ -9,7 +9,8 @@ import {
   useReducer,
 } from "react"
 import { TranslateResponsePayload } from "@/app/translate/types"
-import personalityDefaults from "@/app/translate/personalities.json"
+import data from "@/app/translate/data.json"
+const { personalities } = data
 
 // TODO: move to app's types
 type AsyncStatus = "idle" | "loading" | "success" | "error"
@@ -37,7 +38,13 @@ type TranslatorAction =
   | { type: "translateSuccess"; payload: TranslateResponsePayload }
   | { type: "translateFailure"; payload: unknown } // TODO: payload type
 
-const TranslatorStatusContext = createContext<AsyncStatus>("idle")
+const TranslatorContext = createContext<{
+  status: AsyncStatus
+  resultText?: string | null
+  errors?: string[] | null
+}>({
+  status: "idle",
+})
 const TranslatorSourceContext = createContext<{
   text: string
   language: string | null
@@ -50,25 +57,22 @@ const TranslatorTargetContext = createContext<{
   personality: string
 }>({
   language: "en",
-  personality: personalityDefaults.personalities[0],
+  personality: personalities[0],
 })
-const TranslatorResultContext = createContext<
-  | {
-      hasErrors: false
-      text: string
-    }
-  | {
-      hasErrors: true
-      errors: string[]
-    }
-  | null
->(null)
 const TranslatorDispatchContext = createContext<Dispatch<TranslatorAction>>(
   () => null
 )
 
+const initialState: TranslatorState = {
+  status: "idle",
+  sourceLang: null,
+  sourceText: "",
+  targetLang: "en",
+  targetPersonality: personalities[0],
+}
+
 function reducer(
-  state: TranslatorState,
+  state: TranslatorState = initialState,
   action: TranslatorAction
 ): TranslatorState {
   switch (action.type) {
@@ -121,14 +125,16 @@ export default function TranslatorProvider({
 }: {
   children: ReactNode
 }) {
-  const [state, dispatch] = useReducer(reducer, {
-    status: "idle",
-    sourceLang: null,
-    sourceText: "",
-    targetLang: "en",
-    targetPersonality: personalityDefaults.personalities[0],
-  })
+  const [state, dispatch] = useReducer(reducer, initialState)
 
+  const translatorStore = useMemo(
+    () => ({
+      status: state.status,
+      errors: state.errors,
+      resultText: state.resultText,
+    }),
+    [state.status, state.errors, state.resultText]
+  )
   const sourceStore = useMemo(
     () => ({ text: state.sourceText, language: state.sourceLang }),
     [state.sourceText, state.sourceLang]
@@ -140,36 +146,21 @@ export default function TranslatorProvider({
     }),
     [state.targetLang, state.targetPersonality]
   )
-  const resultStore = useMemo(() => {
-    if (state.errors?.length) {
-      return {
-        hasErrors: true,
-        errors: state.errors,
-      } as { hasErrors: true; errors: string[] }
-    }
-    return {
-      hasErrors: false,
-      text: state.resultText,
-    } as { hasErrors: false; text: string }
-  }, [state.errors, state.resultText])
 
   return (
-    <TranslatorStatusContext.Provider value={state.status}>
+    <TranslatorContext.Provider value={translatorStore}>
       <TranslatorSourceContext.Provider value={sourceStore}>
         <TranslatorTargetContext.Provider value={targetStore}>
-          <TranslatorResultContext.Provider value={resultStore}>
-            <TranslatorDispatchContext.Provider value={dispatch}>
-              {children}
-            </TranslatorDispatchContext.Provider>
-          </TranslatorResultContext.Provider>
+          <TranslatorDispatchContext.Provider value={dispatch}>
+            {children}
+          </TranslatorDispatchContext.Provider>
         </TranslatorTargetContext.Provider>
       </TranslatorSourceContext.Provider>
-    </TranslatorStatusContext.Provider>
+    </TranslatorContext.Provider>
   )
 }
 
-export const useTranslatorStatus = () => useContext(TranslatorStatusContext)
+export const useTranslator = () => useContext(TranslatorContext)
 export const useTranslatorSource = () => useContext(TranslatorSourceContext)
 export const useTranslatorTarget = () => useContext(TranslatorTargetContext)
-export const useTranslatorResult = () => useContext(TranslatorResultContext)
 export const useTranslatorDispatch = () => useContext(TranslatorDispatchContext)

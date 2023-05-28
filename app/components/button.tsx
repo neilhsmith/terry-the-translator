@@ -9,7 +9,7 @@ import {
 import { cva, type VariantProps } from "class-variance-authority"
 
 const buttonCVA = cva(
-  ["flex justify-center items-center", "disabled:bg-gray-50"],
+  ["flex justify-center items-center whitespace-nowrap", "disabled:bg-gray-50"],
   {
     variants: {
       intent: {
@@ -19,9 +19,7 @@ const buttonCVA = cva(
         true: "aspect-square rounded-full",
       },
       size: {
-        sm: "px-6 py-2",
-        md: "px-8 py-3",
-        lg: "px-10 py-4",
+        sm: "px-4 py-1 text-sm lg:px-6 lg:py-2 lg:text-base",
       },
     },
     defaultVariants: {

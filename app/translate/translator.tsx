@@ -9,6 +9,8 @@ import {
   SourceLengthLabel,
   SubmitButton,
   Textarea,
+  SourceLanguageSelector,
+  TargetLanguageSelector,
 } from "@/app/translate/client"
 
 export default function Translator() {
@@ -24,9 +26,9 @@ export default function Translator() {
 
 export function Controller() {
   return (
-    <>
+    <div className="relative">
       <Header>
-        <div>languages</div>
+        <SourceLanguageSelector />
         <SubmitButton />
       </Header>
       <ClickableBody>
@@ -40,15 +42,15 @@ export function Controller() {
           <ClearInputTextButton />
         </MainAction>
       </ClickableBody>
-    </>
+    </div>
   )
 }
 
 export function Results() {
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative flex flex-col h-full">
       <Header>
-        <div>languages</div>
+        <TargetLanguageSelector />
         <PersonalitiesDropdown />
       </Header>
       <Body>
@@ -64,24 +66,22 @@ export function Results() {
   )
 }
 
-function Header({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between mb-2">{children}</div>
-  )
-}
+const Header = ({ children }: { children: ReactNode }) => (
+  <div className="flex items-center justify-between mb-2">{children}</div>
+)
 
-export function Body({ children }: { children: ReactNode }) {
-  return <div className={bodyClasses}>{children}</div>
-}
+export const Body = ({ children }: { children: ReactNode }) => (
+  <div className={bodyClasses}>{children}</div>
+)
 
-function Content({ children }: { children: ReactNode }) {
-  return <div className="flex-1 flex flex-col h-full">{children}</div>
-}
+const Content = ({ children }: { children: ReactNode }) => (
+  <div className="flex-1 flex flex-col h-full">{children}</div>
+)
 
-function MainAction({ children }: { children: ReactNode }) {
-  return <div className="-mt-2 w-8 md:w-10 lg:w-12 text-center">{children}</div>
-}
+const MainAction = ({ children }: { children: ReactNode }) => (
+  <div className="-mt-2 w-8 md:w-10 lg:w-12 text-center">{children}</div>
+)
 
-function Actions({ children }: { children: ReactNode }) {
-  return <div className="flex items-center justify-end mt-4">{children}</div>
-}
+const Actions = ({ children }: { children: ReactNode }) => (
+  <div className="flex items-center justify-end mt-4">{children}</div>
+)

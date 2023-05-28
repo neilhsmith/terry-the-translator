@@ -1,20 +1,24 @@
 "use client"
 
-import { ReactNode, useCallback, useRef } from "react"
+import { ReactNode, useCallback, useMemo, useRef } from "react"
 import { cx } from "class-variance-authority"
 import { IoClose } from "react-icons/io5"
 import FadeIn from "@/app/components/fade-in"
 import Button from "@/app/components/button"
 import Dropdown from "@/app/components/dropdown"
+import TabbedDropdown from "@/app/components/tabbed-dropdown"
 import {
   useTranslatorDispatch,
   useTranslatorSource,
   useTranslatorTarget,
 } from "@/app/translate/provider"
-import personalityDefaults from "@/app/translate/personalities.json"
+
+import data from "@/app/translate/data.json"
+const { languages, personalities } = data
 
 const MAX_SOURCE_TEXT_LENGTH = 5000
 
+// FIXME: fix this, the server Body and this ClickableBody could share a child which sets its own classes
 export const bodyClasses =
   "border-4 p-2 pr-0 md:p-3 md:pr-0 lg:p-4 lg:pr-0 flex items-start flex-1"
 
@@ -109,11 +113,13 @@ export function PersonalitiesDropdown() {
     [dispatch]
   )
 
+  // TODO: use a headless-ui listbox instead
+  // TODO: could probably pass a simple object like the TabbedDropdown in instead of composing here
   return (
     <Dropdown>
       <Dropdown.Trigger>{personality}</Dropdown.Trigger>
       <Dropdown.Items>
-        {personalityDefaults.personalities.map((item) => (
+        {personalities.map((item) => (
           <Dropdown.Item
             key={item}
             selected={item === personality}
@@ -124,5 +130,61 @@ export function PersonalitiesDropdown() {
         ))}
       </Dropdown.Items>
     </Dropdown>
+  )
+}
+
+export function SourceLanguageSelector() {
+  const { language } = useTranslatorSource()
+  const dispatch = useTranslatorDispatch()
+
+  const featuredCodes = useMemo(() => ["de", "en", "es"], [])
+
+  const handleSelect = useCallback(
+    (languageName: string) =>
+      dispatch({
+        type: "setSourceLang",
+        // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
+        payload: languages.find((l) => l.name === languageName)!.code, // safe to assume it exists since we're passing all langs to the dropdown
+      }),
+    [dispatch]
+  )
+
+  return (
+    <TabbedDropdown
+      autoDetect={language ?? ""}
+      onSelect={handleSelect}
+      items={languages.map((l) => ({
+        value: l.name,
+        active: l.code === language,
+        featured: featuredCodes.includes(l.code),
+      }))}
+    />
+  )
+}
+
+export function TargetLanguageSelector() {
+  const { language } = useTranslatorTarget()
+  const dispatch = useTranslatorDispatch()
+
+  const featuredCodes = useMemo(() => ["de", "en", "es"], [])
+
+  const handleSelect = useCallback(
+    (languageName: string) =>
+      dispatch({
+        type: "setTargetLang",
+        payload: languages.find((l) => l.name === languageName)!.code, // safe to assume it exists since we're passing all langs to the dropdown
+      }),
+    [dispatch]
+  )
+
+  return (
+    <TabbedDropdown
+      onSelect={handleSelect}
+      items={languages.map((l) => ({
+        value: l.name,
+        active: l.code === language,
+        featured: featuredCodes.includes(l.code),
+      }))}
+    />
   )
 }

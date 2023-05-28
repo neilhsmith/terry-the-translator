@@ -8,8 +8,8 @@ import {
 } from "react"
 import { cx } from "class-variance-authority"
 import { Menu, Transition } from "@headlessui/react"
-import Button from "./button"
-import { BsCheck, BsChevronDown, BsChevronUp } from "react-icons/bs"
+import { BsCheck, BsChevronDown } from "react-icons/bs"
+import Button from "@/app/components/button"
 
 // TODO:
 // - bring in cva to handle props changes
@@ -40,17 +40,26 @@ function Dropdown({
   )
 }
 
-function Trigger({ children }: { children?: ReactNode }) {
+function Trigger({
+  children,
+  icon = true,
+}: {
+  children?: ReactNode
+  icon?: boolean
+}) {
   return (
     <Menu.Button as={Button}>
       {({ open }) => (
         <>
           {children}
-          {open ? (
-            <BsChevronUp className={cx({ "ml-2": !!children })} />
-          ) : (
-            <BsChevronDown className={cx({ "ml-2": !!children })} />
-          )}
+          {icon ? (
+            <BsChevronDown
+              className={cx("transition", {
+                "ml-2": !!children,
+                "-rotate-180": open,
+              })}
+            />
+          ) : null}
         </>
       )}
     </Menu.Button>
@@ -72,11 +81,12 @@ function Items({ children }: PropsWithChildren<{}>) {
     >
       <Menu.Items
         className={cx(
-          "absolute right-0 mt-2 w-56 bg-white border-4 focus:outline-none z-50",
+          "absolute right-0 mt-2 bg-white border-4 focus:outline-none z-50",
           "drop-shadow-[-.35rem_.65rem_1px_rgba(0,0,0,.4)]",
           {
             "w-full": fluid,
-            "columns-7": fluid,
+            "w-56": !fluid,
+            "columns-2": fluid,
             "origin-top": fluid,
             "origin-top-right": !fluid,
           }

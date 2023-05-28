@@ -1,0 +1,46 @@
+{
+  "personalities": [
+    "Appalachian Hillbilly",
+    "California Valley Girl",
+    "Cajun",
+    "Surfer Bro"
+  ],
+  "languages": [
+    {
+      "code": "en",
+      "name": "English"
+    },
+    {
+      "code": "de",
+      "name": "German"
+    },
+    {
+      "code": "is",
+      "name": "Icelandic"
+    },
+    {
+      "code": "it",
+      "name": "Italian"
+    },
+    {
+      "code": "no",
+      "name": "Norwegian"
+    },
+    {
+      "code": "pl",
+      "name": "Polish"
+    },
+    {
+      "code": "sv",
+      "name": "Swedish"
+    },
+    {
+      "code": "es",
+      "name": "Spanish"
+    },
+    {
+      "code": "tr",
+      "name": "Turkish"
+    }
+  ]
+}

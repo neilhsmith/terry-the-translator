@@ -192,50 +192,6 @@ export function SourceLanguageSelector() {
       </TabbedDropdown.Items>
     </TabbedDropdown>
   )
-
-  // return (
-  //   <Dropdown fluid>
-  //     <Dropdown.Tabs>
-  //       <Dropdown.Tab
-  //         selected={sourceLanguage === null}
-  //         onClick={() => handleSelect(null)}
-  //       >
-  //         Detect language
-  //       </Dropdown.Tab>
-  //       <Dropdown.Tab
-  //         selected={sourceLanguage === "en"}
-  //         onClick={() => handleSelect("English")}
-  //       >
-  //         English
-  //       </Dropdown.Tab>
-  //       <Dropdown.Tab
-  //         selected={sourceLanguage === "fr"}
-  //         onClick={() => handleSelect("French")}
-  //       >
-  //         French
-  //       </Dropdown.Tab>
-  //     </Dropdown.Tabs>
-  //     <Dropdown.Trigger />
-  //     <Dropdown.Trigger />
-  //     <Dropdown.Items>
-  //       <Dropdown.Item
-  //         selected={sourceLanguage === null}
-  //         onClick={() => handleSelect(null)}
-  //       >
-  //         Detect language
-  //       </Dropdown.Item>
-  //       {languages.map((language) => (
-  //         <Dropdown.Item
-  //           key={language.code}
-  //           selected={language.code === sourceLanguage}
-  //           onClick={() => handleSelect(language.name)}
-  //         >
-  //           {language.name}
-  //         </Dropdown.Item>
-  //       ))}
-  //     </Dropdown.Items>
-  //   </Dropdown>
-  // )
 }
 
 export function TargetLanguageSelector() {
@@ -254,15 +210,4 @@ export function TargetLanguageSelector() {
   )
 
   return <div>todo</div>
-
-  // return (
-  //   <TabbedDropdown
-  //     onSelect={handleSelect}
-  //     items={languages.map((l) => ({
-  //       value: l.name,
-  //       active: l.code === language,
-  //       featured: featuredCodes.includes(l.code),
-  //     }))}
-  //   />
-  // )
 }

@@ -9,5 +9,8 @@ module.exports = {
   theme: {
     ...theme,
   },
-  plugins: [require("tailwindcss-fluid-type")],
+  plugins: [
+    require("tailwindcss-fluid-type"),
+    require("@headlessui/tailwindcss"),
+  ],
 }

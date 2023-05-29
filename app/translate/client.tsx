@@ -104,7 +104,7 @@ export function SubmitButton() {
 }
 
 export function PersonalitiesDropdown() {
-  const { personality } = useTranslatorTarget()
+  const { personality: targetPersonality } = useTranslatorTarget()
   const dispatch = useTranslatorDispatch()
 
   const handleSelect = useCallback(
@@ -117,15 +117,15 @@ export function PersonalitiesDropdown() {
   // TODO: could probably pass a simple object like the TabbedDropdown in instead of composing here
   return (
     <Dropdown>
-      <Dropdown.Trigger>{personality}</Dropdown.Trigger>
+      <Dropdown.Trigger>{targetPersonality}</Dropdown.Trigger>
       <Dropdown.Items>
-        {personalities.map((item) => (
+        {personalities.map((personality) => (
           <Dropdown.Item
-            key={item}
-            selected={item === personality}
-            onClick={() => handleSelect(item)}
+            key={personality}
+            selected={personality === targetPersonality}
+            onClick={() => handleSelect(personality)}
           >
-            {item}
+            {personality}
           </Dropdown.Item>
         ))}
       </Dropdown.Items>
@@ -134,32 +134,108 @@ export function PersonalitiesDropdown() {
 }
 
 export function SourceLanguageSelector() {
-  const { language } = useTranslatorSource()
+  const { language: sourceLang } = useTranslatorSource()
   const dispatch = useTranslatorDispatch()
 
-  const featuredCodes = useMemo(() => ["de", "en", "es"], [])
-
   const handleSelect = useCallback(
-    (languageName: string) =>
+    (languageName: string | null) => {
       dispatch({
         type: "setSourceLang",
         // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
-        payload: languages.find((l) => l.name === languageName)!.code, // safe to assume it exists since we're passing all langs to the dropdown
-      }),
+        payload:
+          languages.find((language) => language.name === languageName)?.code ??
+          null,
+      })
+    },
     [dispatch]
   )
 
   return (
-    <TabbedDropdown
-      autoDetect={language ?? ""}
-      onSelect={handleSelect}
-      items={languages.map((l) => ({
-        value: l.name,
-        active: l.code === language,
-        featured: featuredCodes.includes(l.code),
-      }))}
-    />
+    <TabbedDropdown>
+      <TabbedDropdown.Tabs>
+        <TabbedDropdown.Tab
+          selected={sourceLang === null}
+          onClick={() => handleSelect(null)}
+        >
+          Detect language
+        </TabbedDropdown.Tab>
+        <TabbedDropdown.Tab
+          selected={sourceLang === "en"}
+          onClick={() => handleSelect("English")}
+        >
+          English
+        </TabbedDropdown.Tab>
+        <TabbedDropdown.Tab
+          selected={sourceLang === "de"}
+          onClick={() => handleSelect("German")}
+        >
+          German
+        </TabbedDropdown.Tab>
+        <TabbedDropdown.Trigger />
+      </TabbedDropdown.Tabs>
+      <TabbedDropdown.Items>
+        <TabbedDropdown.Item
+          selected={sourceLang === null}
+          onClick={() => handleSelect(null)}
+        >
+          Detect language
+        </TabbedDropdown.Item>
+        {languages.map((language) => (
+          <TabbedDropdown.Item
+            key={language.code}
+            selected={language.code === sourceLang}
+            onClick={() => handleSelect(language.name)}
+          >
+            {language.name}
+          </TabbedDropdown.Item>
+        ))}
+      </TabbedDropdown.Items>
+    </TabbedDropdown>
   )
+
+  // return (
+  //   <Dropdown fluid>
+  //     <Dropdown.Tabs>
+  //       <Dropdown.Tab
+  //         selected={sourceLanguage === null}
+  //         onClick={() => handleSelect(null)}
+  //       >
+  //         Detect language
+  //       </Dropdown.Tab>
+  //       <Dropdown.Tab
+  //         selected={sourceLanguage === "en"}
+  //         onClick={() => handleSelect("English")}
+  //       >
+  //         English
+  //       </Dropdown.Tab>
+  //       <Dropdown.Tab
+  //         selected={sourceLanguage === "fr"}
+  //         onClick={() => handleSelect("French")}
+  //       >
+  //         French
+  //       </Dropdown.Tab>
+  //     </Dropdown.Tabs>
+  //     <Dropdown.Trigger />
+  //     <Dropdown.Trigger />
+  //     <Dropdown.Items>
+  //       <Dropdown.Item
+  //         selected={sourceLanguage === null}
+  //         onClick={() => handleSelect(null)}
+  //       >
+  //         Detect language
+  //       </Dropdown.Item>
+  //       {languages.map((language) => (
+  //         <Dropdown.Item
+  //           key={language.code}
+  //           selected={language.code === sourceLanguage}
+  //           onClick={() => handleSelect(language.name)}
+  //         >
+  //           {language.name}
+  //         </Dropdown.Item>
+  //       ))}
+  //     </Dropdown.Items>
+  //   </Dropdown>
+  // )
 }
 
 export function TargetLanguageSelector() {
@@ -169,7 +245,7 @@ export function TargetLanguageSelector() {
   const featuredCodes = useMemo(() => ["de", "en", "es"], [])
 
   const handleSelect = useCallback(
-    (languageName: string) =>
+    (languageName: string | null) =>
       dispatch({
         type: "setTargetLang",
         payload: languages.find((l) => l.name === languageName)!.code, // safe to assume it exists since we're passing all langs to the dropdown
@@ -177,14 +253,16 @@ export function TargetLanguageSelector() {
     [dispatch]
   )
 
-  return (
-    <TabbedDropdown
-      onSelect={handleSelect}
-      items={languages.map((l) => ({
-        value: l.name,
-        active: l.code === language,
-        featured: featuredCodes.includes(l.code),
-      }))}
-    />
-  )
+  return <div>todo</div>
+
+  // return (
+  //   <TabbedDropdown
+  //     onSelect={handleSelect}
+  //     items={languages.map((l) => ({
+  //       value: l.name,
+  //       active: l.code === language,
+  //       featured: featuredCodes.includes(l.code),
+  //     }))}
+  //   />
+  // )
 }

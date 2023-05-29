@@ -1,119 +1,120 @@
-import { useRef, useState } from "react"
+"use client"
+
 import { cx } from "class-variance-authority"
-import Dropdown from "./dropdown"
+import {
+  Dispatch,
+  PropsWithChildren,
+  ReactNode,
+  SetStateAction,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
+import Button from "./button"
+import { BsChevronDown } from "react-icons/bs"
+import FadeIn from "./fade-in"
 
-const MAX_FEATURED_ITEMS = 3
+/**
+ * TODO: create a tabbed-dropdown component because headless-ui's menus break w/ multiple Menu.Buttons
+ * - compound components
+ *    - TabbedDropdown, TabbedDropdown.Tabs, TabbedDropdown.Tab, TabbedDropdown.Trigger, TabbedDropdown.Items, TabbedDropdown.Item
+ * - the TabbedDropdown wraps everything in a context to manage the open state and provide open/close functions
+ * - props like active & selected are provided to the Tab & Item components
+ * - the tabs component should set something in context so that the items can position themselves correctly
+ */
 
-type Item = {
-  active: boolean
-  featured: boolean
-  value: string
-}
+const DropdownContext = createContext<{
+  open: boolean
+  setOpen: Dispatch<SetStateAction<boolean>>
+}>({
+  open: false,
+  setOpen: () => null,
+})
 
-type TabbedDropdownProps = {
-  autoDetect?: string
-  items: Item[]
-  onSelect: (value: string) => void
-}
-
-// header: a list of 3ish clickable tabs & a caret trigger btn
-//   - 1 click selects the tab
-//   - 2 clicks opens the dropdown
-//   - caret btn opens the dropdown
-//   - if autoDetect, the first tab is "auto"
-//     - auto is selected if none of the item's active is true
-//     - keep a ref which indicates a lang was set by autoDetect so we can select and display: English: Detected
-//   - keep a ref of the last selected langs and use these on the header over featured
-//     - only update when selecting from the dropdown so nothing moves when selecting header items
-//   - tab count is based on container width, could just show the caret if there's not enough room
-// dropdown: a list of items
-//   - add columns based on the count
-//   - absolutely positioned and fills width, assumes there's a relative parent somewhere to contain it
-
-export default function TabbedDropdown({
-  autoDetect,
-  items,
-  onSelect,
-}: TabbedDropdownProps) {
-  const active = getActive(items)
-  const [featured, setFeatured] = useState(getFeatured(items))
-  const canAutoDetect = typeof autoDetect !== "undefined"
-
-  const handleSelect = (item: Item) => {
-    const prev = featured.map((i) => ({ ...i, active: false }))
-    setFeatured([
-      { ...item, active: true },
-      ...prev.slice(0, MAX_FEATURED_ITEMS - 1),
-    ])
-    onSelect(item.value)
-  }
-
-  const handleFeaturedClick = (item: Item) => {
-    if (item === active) {
-      // TODO: open dropdown
-    } else {
-      const newFeatured = featured.map((f) => {
-        if (f === item) {
-          return { ...f, active: true }
-        } else {
-          return { ...f, active: false }
-        }
-      })
-      setFeatured(newFeatured)
-      onSelect(item.value)
-    }
-  }
-
-  const handleAutoDetectClick = () => {
-    // TODO: left off here but it's getting messy:
-    // - might help to model the state of being in auto detect vs not better
-  }
+export default function TabbedDropdown({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false)
 
   return (
-    <Dropdown fluid>
-      <div className="flex gap-3">
-        {canAutoDetect ? (
-          <button
-            type="button"
-            onClick={() => handleAutoDetectClick()}
-            className={cx("text-sm", {
-              "border-b-2": canAutoDetect && !active,
-            })}
-          >
-            Autodetect
-          </button>
-        ) : null}
-        {featured.map((item) => (
-          <button
-            key={item.value}
-            type="button"
-            onClick={() => handleFeaturedClick(item)}
-            className={cx("text-sm", { "border-b-2": item.active })}
-          >
-            {item.value}
-          </button>
-        ))}
-        <Dropdown.Trigger />
-      </div>
-      <Dropdown.Items>
-        {items.map((item) => (
-          <Dropdown.Item
-            key={item.value}
-            selected={item.active}
-            onClick={() => handleSelect(item)}
-          >
-            {item.value}
-          </Dropdown.Item>
-        ))}
-      </Dropdown.Items>
-    </Dropdown>
+    <DropdownContext.Provider value={{ open, setOpen }}>
+      {children}
+    </DropdownContext.Provider>
   )
 }
 
-function getActive(items: Item[]) {
-  return items.find((item) => item.active)
+TabbedDropdown.Tabs = function Tabs({ children }: { children: ReactNode }) {
+  return <div className="flex items-stretch gap-3">{children}</div>
 }
 
-function getFeatured(items: Item[], count = MAX_FEATURED_ITEMS) {
-  return items.filter((item) => item.featured).slice(0, count)
+TabbedDropdown.Tab = function Tab({
+  children,
+  onClick,
+  selected,
+}: PropsWithChildren<{
+  onClick: () => void
+  selected: boolean
+}>) {
+  return <div>{children}</div>
+}
+
+TabbedDropdown.Trigger = function Trigger() {
+  const ref = useRef<HTMLButtonElement>(null)
+  const { open, setOpen } = useContext(DropdownContext)
+
+  useEffect(() => {
+    if (!document || !ref.current) return
+    const current = ref.current
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (document.activeElement !== current) return
+
+      if (e.key === "Enter" || e.key === " ") {
+        setOpen((prev) => !prev)
+      }
+    }
+
+    current.addEventListener("keydown", handleKeydown)
+    return () => current?.removeEventListener("keydown", handleKeydown)
+  }, [])
+
+  return (
+    <button ref={ref}>
+      <BsChevronDown
+        onClick={() => setOpen(!open)}
+        className={cx("transition-transform", {
+          "-rotate-180": open,
+          "rotate-0": !open,
+        })}
+      />
+    </button>
+  )
+}
+
+TabbedDropdown.Items = function Items({ children }: { children: ReactNode }) {
+  const { open } = useContext(DropdownContext)
+
+  return (
+    <FadeIn
+      show={open}
+      tabIndex={0}
+      className={cx(
+        "absolute inset-x-0 mt-[8px] top-[51px]",
+        "bg-white border-4 columns-2 origin-top-left"
+      )}
+    >
+      {children}
+    </FadeIn>
+  )
+}
+
+TabbedDropdown.Item = function Item({
+  children,
+  onClick,
+  selected,
+}: PropsWithChildren<{
+  onClick: () => void
+  selected: boolean
+}>) {
+  return <div>{children}</div>
 }

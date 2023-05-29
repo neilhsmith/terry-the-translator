@@ -4,6 +4,7 @@ import {
   Fragment,
   PropsWithChildren,
   ReactNode,
+  useCallback,
   useContext,
 } from "react"
 import { cx } from "class-variance-authority"
@@ -14,7 +15,15 @@ import Button from "@/app/components/button"
 // TODO:
 // - bring in cva to handle props changes
 
-const FluidContext = createContext(false)
+const DropdownContext = createContext<{
+  fluid: boolean
+  open: boolean
+  close: () => void
+}>({
+  fluid: false,
+  open: false,
+  close: () => null,
+})
 
 type DropdownProps = {
   fluid?: boolean
@@ -26,17 +35,25 @@ function Dropdown({
   ...rest
 }: PropsWithChildren<DropdownProps>) {
   return (
-    <FluidContext.Provider value={fluid}>
-      <Menu
-        as="div"
-        className={cx("inline-block text-left", {
-          relative: !fluid,
-        })}
-        {...rest}
-      >
-        {children}
-      </Menu>
-    </FluidContext.Provider>
+    <Menu
+      as="div"
+      className={cx("inline-block text-left", {
+        relative: !fluid,
+      })}
+      {...rest}
+    >
+      {({ close, open }) => (
+        <DropdownContext.Provider
+          value={{
+            fluid,
+            open,
+            close,
+          }}
+        >
+          {children}
+        </DropdownContext.Provider>
+      )}
+    </Menu>
   )
 }
 
@@ -49,25 +66,20 @@ function Trigger({
 }) {
   return (
     <Menu.Button as={Button}>
-      {({ open }) => (
-        <>
-          {children}
-          {icon ? (
-            <BsChevronDown
-              className={cx("transition", {
-                "ml-2": !!children,
-                "-rotate-180": open,
-              })}
-            />
-          ) : null}
-        </>
-      )}
+      {children}
+      {icon ? (
+        <BsChevronDown
+          className={cx("transition ui-open:-rotate-180", {
+            "ml-2": !!children,
+          })}
+        />
+      ) : null}
     </Menu.Button>
   )
 }
 
 function Items({ children }: PropsWithChildren<{}>) {
-  const fluid = useContext(FluidContext)
+  const { fluid } = useContext(DropdownContext)
 
   return (
     <Transition
@@ -107,7 +119,7 @@ function Item({
     <Menu.Item>
       <button
         type="button"
-        className="group flex w-full items-center px-2 py-2 hover:bg-gray-50 whitespace-nowrap"
+        className="flex w-full items-center px-2 py-2 whitespace-nowrap hover:bg-gray-50 ui-active:bg-gray-50"
         onClick={onClick}
       >
         {selected ? <BsCheck className="mr-2" /> : null}

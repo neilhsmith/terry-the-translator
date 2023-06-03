@@ -45,7 +45,7 @@ export default function TabbedDropdown({ children }: { children: ReactNode }) {
       open,
       setOpen,
     }),
-    [open]
+    [id, open]
   )
 
   return (
@@ -89,6 +89,7 @@ TabbedDropdown.Tab = function Tab({
       type="button"
       role="tab"
       aria-controls={id}
+      aria-expanded={open}
       aria-selected={selected}
       aria-label="Select and control the dropdown menu"
       className={cx("text-sm", {
@@ -119,9 +120,9 @@ TabbedDropdown.Trigger = function Trigger() {
 
     current.addEventListener("keydown", handleKeydown)
     return () => current?.removeEventListener("keydown", handleKeydown)
-  }, [])
+  }, [setOpen])
 
-  // TODO: styling & aria & other keybinds like down arrow, esc, etc...
+  // TODO: aria & other keybinds like down arrow, esc, etc...
   return (
     <button ref={ref}>
       <BsChevronDown
@@ -136,22 +137,50 @@ TabbedDropdown.Trigger = function Trigger() {
 }
 
 TabbedDropdown.Items = function Items({ children }: { children: ReactNode }) {
-  const { id, open } = useContext(DropdownContext)
+  const { id, open, setOpen } = useContext(DropdownContext)
 
-  // TODO: spacing, aria, mouse focus & lock
+  const ref = useRef<HTMLDivElement>(null)
+  const prevFocusedRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setOpen(false)
+      }
+    }
+
+    document.addEventListener("keydown", handleKeydown)
+    return () => document.removeEventListener("keydown", handleKeydown)
+  }, [open, setOpen])
+
+  // TODO:
+  // when closed, select the selected item, not the previously focused element
+  useEffect(() => {
+    if (open) {
+      prevFocusedRef.current = document.activeElement as HTMLElement
+      ref.current?.focus() // FIXME: should focus on the first focusable child, not current
+    } else {
+      prevFocusedRef.current?.focus()
+    }
+  }, [open])
+
   return (
-    <FadeIn
-      id={id}
-      show={open}
-      tabIndex={0}
-      role="tabpanel"
-      className={cx(
-        "absolute inset-x-0 p-2 mt-[8px] top-[51px]",
-        "bg-white border-4 columns-2 origin-top-left"
-      )}
-    >
-      {children}
-    </FadeIn>
+    <div ref={ref} tabIndex={0}>
+      <FadeIn
+        id={id}
+        show={open}
+        tabIndex={0}
+        aria-expanded={open}
+        className={cx(
+          "absolute inset-x-0 p-2 mt-[8px] top-[51px]",
+          "bg-white border-4 columns-2 origin-top-left"
+        )}
+      >
+        {children}
+      </FadeIn>
+    </div>
   )
 }
 
@@ -168,7 +197,7 @@ TabbedDropdown.Item = function Item({
   const handleClick = useCallback(() => {
     onClick()
     setOpen(false)
-  }, [])
+  }, [onClick, setOpen])
 
   // TODO: styling & aria
   return (

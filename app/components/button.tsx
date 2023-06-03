@@ -1,6 +1,5 @@
 import {
   ComponentPropsWithRef,
-  ComponentPropsWithoutRef,
   ElementType,
   PropsWithChildren,
   Ref,

@@ -17,6 +17,7 @@ import data from "@/app/translate/data.json"
 const { languages, personalities } = data
 
 const MAX_SOURCE_TEXT_LENGTH = 5000
+const MAX_SOURCE_TABS_COUNT = 3
 
 // FIXME: fix this, the server Body and this ClickableBody could share a child which sets its own classes
 export const bodyClasses =
@@ -59,6 +60,7 @@ export function Textarea() {
       onChange={(e) => handleChange(e.target.value)}
       className="w-full bg-transparent resize-none overflow-y-hidden min-h-[4rem] focus:outline-none"
       style={{
+        // FIXME: doesn't decrease properly
         height: ref.current?.scrollHeight,
       }}
     />
@@ -137,14 +139,29 @@ export function SourceLanguageSelector() {
   const { language: sourceLang } = useTranslatorSource()
   const dispatch = useTranslatorDispatch()
 
+  // TODO: this should probably go in the TabbedDropdown.Tabs component
+  // stores the recently selected langs so we can show them in the tabs
+  const selectedLangsRef = useRef<{ code: string; name: string }[]>(
+    languages.slice(0, MAX_SOURCE_TABS_COUNT)
+  )
+
   const handleSelect = useCallback(
     (languageName: string | null) => {
+      // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
+      const lang = languages.find((language) => language.name === languageName)
+
+      // if languageName isn't on selectedLangsRef yet, push it and remove last item
+      if (
+        !!lang &&
+        !selectedLangsRef.current.some((l) => l.name === languageName)
+      ) {
+        selectedLangsRef.current = [lang, ...selectedLangsRef.current]
+        selectedLangsRef.current.pop()
+      }
+
       dispatch({
         type: "setSourceLang",
-        // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
-        payload:
-          languages.find((language) => language.name === languageName)?.code ??
-          null,
+        payload: lang?.code ?? null,
       })
     },
     [dispatch]
@@ -159,18 +176,15 @@ export function SourceLanguageSelector() {
         >
           Detect language
         </TabbedDropdown.Tab>
-        <TabbedDropdown.Tab
-          selected={sourceLang === "en"}
-          onClick={() => handleSelect("English")}
-        >
-          English
-        </TabbedDropdown.Tab>
-        <TabbedDropdown.Tab
-          selected={sourceLang === "de"}
-          onClick={() => handleSelect("German")}
-        >
-          German
-        </TabbedDropdown.Tab>
+        {selectedLangsRef.current.map((language) => (
+          <TabbedDropdown.Tab
+            key={language.code}
+            selected={language.code === sourceLang}
+            onClick={() => handleSelect(language.name)}
+          >
+            {language.name}
+          </TabbedDropdown.Tab>
+        ))}
         <TabbedDropdown.Trigger />
       </TabbedDropdown.Tabs>
       <TabbedDropdown.Items>

@@ -251,14 +251,18 @@ export function SourceLanguageSelector() {
         <Tabs as="div">
           <Tab as="div" ref={divRef}>
             {({ active, disabled, open, close }) => (
-              <button onClick={console.log}>idk {active.toString()}</button>
+              <button onClick={console.log}>
+                idk {active.toString()} {open.toString()}
+              </button>
             )}
           </Tab>
         </Tabs>
       </TabsMenu>
       <TabsMenu>
-        <Tabs aria-label="todo: menubar descrip">
-          <Tab onClick={console.log}>Tab 1</Tab>
+        <Tabs openMode="doubleClick" aria-label="todo: menubar descrip">
+          <Tab openMode="singleClick" onClick={console.log}>
+            Tab1
+          </Tab>
           <Tab>
             <button onClick={console.log}>Tab 2</button>
           </Tab>

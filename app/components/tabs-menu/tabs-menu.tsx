@@ -11,7 +11,7 @@
  * Example:
  *
  * <TabsMenu>
- *   <TabsMenu.Tabs mode="selectAndOpen | selectThenOpen" aria-label="Languages">
+ *   <TabsMenu.Tabs openMode="singleClick | doubleClick" aria-label="Languages">
  *     <TabsMenu.Tab>
  *       {({active, disabled, menuOpen}) => (
  *         <button ...classes & props based on render props...>Item 1</button>
@@ -64,6 +64,9 @@ import React, {
   useMemo,
   useReducer,
   ReactNode,
+  useEffect,
+  useRef,
+  RefObject,
 } from "react"
 import { PolymorphicComponentPropsWithRef, PolymorphicRef } from "@/app/types"
 
@@ -72,12 +75,6 @@ import { PolymorphicComponentPropsWithRef, PolymorphicRef } from "@/app/types"
  * - test rendering a plain element at each level w/ render props
  *    - i'm pretty sure some wont add the aria attrs they should since they aren't rendered via React.cloneElement
  *    - the Tab component is a good working example
- * - figure out how to handle the Tab's "selectAndOpen" vs "selectThenOpen" mode thing
- *    - the issue is that we don't actually have the concept of selecting internally
- *    - so do i treat it as singleClick vs doubleClick before opening the items?
- *    - or do i make it so that it's always a double click on a Tab to open the items?
- *    - not ideal but - add an 'open' callback to the render prop so that we can manually open when needed?
- *    - also, should onClick fire when double clicking a tab?
  * - implement the toggle state
  *    - theres mocked close callbacks for render props sprinkled around
  * - implement Items and Item
@@ -90,6 +87,34 @@ function useId(componentName: string) {
   return `tabs-menu-${componentName}-${id}`
 }
 
+function useOutsideClick<T extends HTMLElement = HTMLElement>(
+  ref: RefObject<T>,
+  handler: (event: Event) => void
+) {
+  useEffect(() => {
+    const listener = (event: Event) => {
+      const el = ref?.current
+
+      // Do nothing if clicking ref's element or descendent elements
+      if (!el || el.contains(event.target as Node)) {
+        return
+      }
+
+      handler(event)
+    }
+
+    document.addEventListener("mousedown", listener)
+    document.addEventListener("touchstart", listener)
+
+    return () => {
+      document.removeEventListener("mousedown", listener)
+      document.removeEventListener("touchstart", listener)
+    }
+
+    // Reload only if ref or handler changes
+  }, [ref, handler])
+}
+
 // STATE ---------------------------------
 
 enum ToggleState {
@@ -97,19 +122,29 @@ enum ToggleState {
   Closed = "closed",
 }
 
+type TabsOpenMode = "singleClick" | "doubleClick"
+
 type MenuState = {
-  itemsId: string
-  activeTabId: string | null // the tab being hovered or focused for aria-activedescendant
+  itemsId: string // the items list id - needed for aria targets across levels
+  activeTabId: string | null // the tab being hovered or focused - for aria-activedescendant
+  tabsOpenMode: TabsOpenMode // how many clicks on tab before the menu opens - useful for select then open ux flows
+  toggleState: ToggleState // whether the menu is open or closed
 }
 
 enum ActionType {
   ActivateTab = "activateTab",
   DeactivateTab = "deactivateTab",
+  Open = "open",
+  Close = "close",
+  SetTabsMode = "setTabsMode",
 }
 
 type Actions =
   | { type: ActionType.ActivateTab; payload: string | null }
   | { type: ActionType.DeactivateTab }
+  | { type: ActionType.Open }
+  | { type: ActionType.Close }
+  | { type: ActionType.SetTabsMode; payload: TabsOpenMode }
 
 function menuReducer(state: MenuState, action: Actions) {
   switch (action.type) {
@@ -123,30 +158,28 @@ function menuReducer(state: MenuState, action: Actions) {
         ...state,
         activeTabId: null,
       }
+    case ActionType.Open:
+      return {
+        ...state,
+        toggleState: ToggleState.Open,
+      }
+    case ActionType.Close:
+      return {
+        ...state,
+        toggleState: ToggleState.Closed,
+      }
+    case ActionType.SetTabsMode:
+      return {
+        ...state,
+        tabsOpenMode: action.payload,
+      }
     default:
       return state
   }
 }
 
-const ToggleContext = createContext<ToggleState | null>(null)
 const MenuContext = createContext<MenuState | null>(null)
 const DispatchContext = createContext<Dispatch<Actions> | null>(null)
-
-function useToggleContext(componentName: string) {
-  const context = useContext(ToggleContext)
-
-  if (context === null) {
-    const error = new Error(
-      `<${componentName}> must be used within a <TabsMenu>`
-    )
-    if (Error.captureStackTrace)
-      Error.captureStackTrace(error, useToggleContext)
-
-    throw error
-  }
-
-  return context
-}
 
 function useMenuContext(componentName: string) {
   const context = useContext(MenuContext)
@@ -155,8 +188,7 @@ function useMenuContext(componentName: string) {
     const error = new Error(
       `<${componentName}> must be used within a <TabsMenu>`
     )
-    if (Error.captureStackTrace)
-      Error.captureStackTrace(error, useToggleContext)
+    if (Error.captureStackTrace) Error.captureStackTrace(error, useMenuContext)
 
     throw error
   }
@@ -171,8 +203,7 @@ function useMenuDispatch(componentName: string) {
     const error = new Error(
       `<${componentName}> must be used within a <TabsMenu>`
     )
-    if (Error.captureStackTrace)
-      Error.captureStackTrace(error, useToggleContext)
+    if (Error.captureStackTrace) Error.captureStackTrace(error, useMenuDispatch)
 
     throw error
   }
@@ -208,19 +239,24 @@ export const TabsMenu: TabsMenuComponent = forwardRef(function TabsMenu<
   const [menuState, dispatch] = useReducer(menuReducer, {
     itemsId: itemsId,
     activeTabId: null,
+    toggleState: ToggleState.Closed,
+    tabsOpenMode: "singleClick",
   })
+
+  console.log(menuState)
 
   return (
     <MenuContext.Provider value={menuState}>
-      <ToggleContext.Provider value={ToggleState.Closed}>
-        <DispatchContext.Provider value={dispatch}>
-          <Component ref={ref} {...rest}>
-            {typeof children === "function"
-              ? children({ open: false, close: () => {} })
-              : children}
-          </Component>
-        </DispatchContext.Provider>
-      </ToggleContext.Provider>
+      <DispatchContext.Provider value={dispatch}>
+        <Component ref={ref} {...rest}>
+          {typeof children === "function"
+            ? children({
+                open: false,
+                close: () => dispatch({ type: ActionType.Close }),
+              })
+            : children}
+        </Component>
+      </DispatchContext.Provider>
     </MenuContext.Provider>
   )
 })
@@ -230,7 +266,7 @@ export const TabsMenu: TabsMenuComponent = forwardRef(function TabsMenu<
 const DEFAULT_TABS_TAG = "ul"
 
 type TabsProps = {
-  mode?: "selectAndOpen" | "selectThenOpen"
+  openMode?: TabsOpenMode
   role?: undefined
   children: ReactNode | (({ open }: { open: boolean }) => ReactNode)
 }
@@ -245,16 +281,24 @@ export const Tabs: TabsComponent = forwardRef(function Tabs<
   {
     as,
     children,
-    mode = "selectThenOpen",
     role,
+    openMode = "singleClick",
     ...rest
   }: PolymorphicComponentPropsWithRef<C, TabsProps>,
   ref?: PolymorphicRef<C>
 ) {
   const Component = as || DEFAULT_TABS_TAG
 
-  const { activeTabId } = useMenuContext("Tabs")
-  const toggleState = useToggleContext("Tabs")
+  const { activeTabId, toggleState } = useMenuContext("Tabs")
+  const dispatch = useMenuDispatch("Tabs")
+
+  // TODO: wondering if there's a better way to do this than useEffect
+  // - we're just pushing the openMode prop into the TabsMenu context
+  // - but we are kinda doing sync stuff here - keeping the internal state in sync with the prop (which techically can change)
+  useEffect(
+    () => dispatch({ type: ActionType.SetTabsMode, payload: openMode }),
+    [dispatch, openMode]
+  )
 
   return (
     <Component
@@ -270,12 +314,13 @@ export const Tabs: TabsComponent = forwardRef(function Tabs<
   )
 })
 
-// BUTTON ---------------------------------
+// Tab ---------------------------------
 
 const DEFAULT_TAB_TAG = "li"
 
 type TabProps = {
   disabled?: boolean
+  openMode?: "singleClick" | "doubleClick"
   children:
     | ReactNode
     | (({
@@ -301,28 +346,67 @@ export const Tab: TabComponent = forwardRef(function Tab<
   {
     as,
     children,
+    openMode,
     disabled = false,
     ...rest
   }: PolymorphicComponentPropsWithRef<C, TabProps>,
-  ref?: PolymorphicRef<C>
+  refProp?: PolymorphicRef<C>
 ) {
   const Component = as || DEFAULT_TAB_TAG
 
-  const id = useId("button")
-  const { activeTabId, itemsId } = useMenuContext("Button")
-  const toggleState = useToggleContext("Button")
-  const dispatch = useMenuDispatch("Button")
+  const id = useId("tab")
+  const dispatch = useMenuDispatch("Tab")
+  const { activeTabId, itemsId, tabsOpenMode, toggleState } =
+    useMenuContext("Tab")
 
-  const hoverOn = useCallback(
+  // need to use the ref to track outside clicks, so create one if not given
+  const ref = useRef<HTMLElement>(refProp || null)
+
+  // a tab can overrides the tabs open mode
+  const actualOpenMode = openMode ?? tabsOpenMode
+
+  // we track if the previous click was on this tab for doubleClick mode and reset it on outside clicks. named 'click' but works for touch too
+  const doubleClickActive = useRef<boolean>(false)
+  useOutsideClick(ref, () => {
+    doubleClickActive.current = false
+  })
+
+  const handleHoverOn = useCallback(
     () => dispatch({ type: ActionType.ActivateTab, payload: id }),
     [dispatch, id]
   )
-  const hoverOff = useCallback(
+  const handleHoverOff = useCallback(
     () => dispatch({ type: ActionType.DeactivateTab }),
     [dispatch]
   )
 
-  const attrs = useMemo(
+  const handleClick = useCallback(() => {
+    // note: no need to call onClick callbacks or anything as that's spread on via the ...rest already
+
+    // if open, close
+    if (toggleState === ToggleState.Open) {
+      dispatch({ type: ActionType.Close })
+      return
+    }
+
+    // if singleClick mode, open
+    if (actualOpenMode === "singleClick") {
+      dispatch({ type: ActionType.Open })
+      return
+    }
+
+    // otherwise we're in doubleClick mode and need to track sequential clicks to determine if we should open the menu
+    if (!doubleClickActive.current) {
+      doubleClickActive.current = true
+      return
+    }
+
+    // officially is a double click, so open the menu & reset the click tracker
+    doubleClickActive.current = false
+    dispatch({ type: ActionType.Open })
+  }, [actualOpenMode, toggleState, dispatch])
+
+  const sharedAttrs = useMemo(
     () => ({
       id: id,
       role: "menuitem",
@@ -330,12 +414,21 @@ export const Tab: TabComponent = forwardRef(function Tab<
       "aria-haspopup": "menu" as "menu", // the fallback button wouldn't shutup w/o this as
       "aria-expanded": toggleState === ToggleState.Open,
       "aria-disabled": disabled,
-      onFocus: hoverOn,
-      onMouseEnter: hoverOn,
-      onBlur: hoverOff,
-      onMouseLeave: hoverOff,
+      onFocus: handleHoverOn,
+      onMouseEnter: handleHoverOn,
+      onBlur: handleHoverOff,
+      onMouseLeave: handleHoverOff,
+      onClick: handleClick,
     }),
-    [disabled, hoverOn, hoverOff, id, itemsId, toggleState]
+    [
+      disabled,
+      handleClick,
+      handleHoverOn,
+      handleHoverOff,
+      id,
+      itemsId,
+      toggleState,
+    ]
   )
 
   return (
@@ -346,20 +439,20 @@ export const Tab: TabComponent = forwardRef(function Tab<
               active: id === activeTabId,
               disabled,
               open: toggleState === ToggleState.Open,
-              close: () => {},
+              close: () => dispatch({ type: ActionType.Close }),
             }),
-            attrs
+            sharedAttrs
           )
         : React.Children.map(children, (child, index) => {
             if (React.isValidElement(child)) {
               return React.cloneElement(child, {
                 key: index,
-                ...attrs,
+                ...sharedAttrs,
               })
             }
 
             return (
-              <button key={index} type="button" {...attrs}>
+              <button key={index} type="button" {...sharedAttrs}>
                 {child}
               </button>
             )

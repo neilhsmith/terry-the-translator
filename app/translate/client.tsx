@@ -14,6 +14,8 @@ import {
 } from "@/app/translate/provider"
 
 import data from "@/app/translate/data.json"
+import { TabsMenu, Tabs, Tab } from "../components/tabs-menu/tabs-menu"
+import { Menu } from "@headlessui/react"
 const { languages, personalities } = data
 
 const MAX_SOURCE_TEXT_LENGTH = 5000
@@ -135,78 +137,78 @@ export function PersonalitiesDropdown() {
   )
 }
 
-export function SourceLanguageSelector() {
-  const { language: sourceLang } = useTranslatorSource()
-  const dispatch = useTranslatorDispatch()
+// export function SourceLanguageSelector() {
+//   const { language: sourceLang } = useTranslatorSource()
+//   const dispatch = useTranslatorDispatch()
 
-  // TODO: this should probably go in the TabbedDropdown.Tabs component
-  // stores the recently selected langs so we can show them in the tabs
-  const selectedLangsRef = useRef<{ code: string; name: string }[]>(
-    languages.slice(0, MAX_SOURCE_TABS_COUNT)
-  )
+//   // TODO: this should probably go in the TabbedDropdown.Tabs component
+//   // stores the recently selected langs so we can show them in the tabs
+//   const selectedLangsRef = useRef<{ code: string; name: string }[]>(
+//     languages.slice(0, MAX_SOURCE_TABS_COUNT)
+//   )
 
-  const handleSelect = useCallback(
-    (languageName: string | null) => {
-      // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
-      const lang = languages.find((language) => language.name === languageName)
+//   const handleSelect = useCallback(
+//     (languageName: string | null) => {
+//       // TODO: transform the lang state to be Record<code, name> instead so this find isn't necessary
+//       const lang = languages.find((language) => language.name === languageName)
 
-      // if languageName isn't on selectedLangsRef yet, push it and remove last item
-      if (
-        !!lang &&
-        !selectedLangsRef.current.some((l) => l.name === languageName)
-      ) {
-        selectedLangsRef.current = [lang, ...selectedLangsRef.current]
-        selectedLangsRef.current.pop()
-      }
+//       // if languageName isn't on selectedLangsRef yet, push it and remove last item
+//       if (
+//         !!lang &&
+//         !selectedLangsRef.current.some((l) => l.name === languageName)
+//       ) {
+//         selectedLangsRef.current = [lang, ...selectedLangsRef.current]
+//         selectedLangsRef.current.pop()
+//       }
 
-      dispatch({
-        type: "setSourceLang",
-        payload: lang?.code ?? null,
-      })
-    },
-    [dispatch]
-  )
+//       dispatch({
+//         type: "setSourceLang",
+//         payload: lang?.code ?? null,
+//       })
+//     },
+//     [dispatch]
+//   )
 
-  return (
-    <TabbedDropdown>
-      <TabbedDropdown.Tabs>
-        <TabbedDropdown.Tab
-          selected={sourceLang === null}
-          onClick={() => handleSelect(null)}
-        >
-          Detect language
-        </TabbedDropdown.Tab>
-        {selectedLangsRef.current.map((language) => (
-          <TabbedDropdown.Tab
-            key={language.code}
-            selected={language.code === sourceLang}
-            onClick={() => handleSelect(language.name)}
-          >
-            {language.name}
-          </TabbedDropdown.Tab>
-        ))}
-        <TabbedDropdown.Trigger />
-      </TabbedDropdown.Tabs>
-      <TabbedDropdown.Items>
-        <TabbedDropdown.Item
-          selected={sourceLang === null}
-          onClick={() => handleSelect(null)}
-        >
-          Detect language
-        </TabbedDropdown.Item>
-        {languages.map((language) => (
-          <TabbedDropdown.Item
-            key={language.code}
-            selected={language.code === sourceLang}
-            onClick={() => handleSelect(language.name)}
-          >
-            {language.name}
-          </TabbedDropdown.Item>
-        ))}
-      </TabbedDropdown.Items>
-    </TabbedDropdown>
-  )
-}
+//   return (
+//     <TabbedDropdown>
+//       <TabbedDropdown.Tabs>
+//         <TabbedDropdown.Tab
+//           selected={sourceLang === null}
+//           onClick={() => handleSelect(null)}
+//         >
+//           Detect language
+//         </TabbedDropdown.Tab>
+//         {selectedLangsRef.current.map((language) => (
+//           <TabbedDropdown.Tab
+//             key={language.code}
+//             selected={language.code === sourceLang}
+//             onClick={() => handleSelect(language.name)}
+//           >
+//             {language.name}
+//           </TabbedDropdown.Tab>
+//         ))}
+//         <TabbedDropdown.Trigger />
+//       </TabbedDropdown.Tabs>
+//       <TabbedDropdown.Items>
+//         <TabbedDropdown.Item
+//           selected={sourceLang === null}
+//           onClick={() => handleSelect(null)}
+//         >
+//           Detect language
+//         </TabbedDropdown.Item>
+//         {languages.map((language) => (
+//           <TabbedDropdown.Item
+//             key={language.code}
+//             selected={language.code === sourceLang}
+//             onClick={() => handleSelect(language.name)}
+//           >
+//             {language.name}
+//           </TabbedDropdown.Item>
+//         ))}
+//       </TabbedDropdown.Items>
+//     </TabbedDropdown>
+//   )
+// }
 
 export function TargetLanguageSelector() {
   const { language } = useTranslatorTarget()
@@ -224,4 +226,50 @@ export function TargetLanguageSelector() {
   )
 
   return <div>todo</div>
+}
+
+export function SourceLanguageSelector() {
+  const divRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <>
+      <Menu>
+        <Menu.Button>Menu</Menu.Button>
+        <Menu.Items unmount={false}>
+          <Menu.Item as="span">Item 1</Menu.Item>
+          <Menu.Item as="span">Item 2</Menu.Item>
+          <Menu.Item as="span">Item 3</Menu.Item>
+          <Menu.Item as="button" disabled>
+            idk
+          </Menu.Item>
+          <Menu.Item disabled>
+            {({ active }) => <button onClick={console.log}>Tab 6</button>}
+          </Menu.Item>
+        </Menu.Items>
+      </Menu>
+      <TabsMenu as="div">
+        <Tabs as="div">
+          <Tab as="div" ref={divRef}>
+            {({ active, disabled, open, close }) => (
+              <button onClick={console.log}>idk {active.toString()}</button>
+            )}
+          </Tab>
+        </Tabs>
+      </TabsMenu>
+      <TabsMenu>
+        <Tabs aria-label="todo: menubar descrip">
+          <Tab onClick={console.log}>Tab 1</Tab>
+          <Tab>
+            <button onClick={console.log}>Tab 2</button>
+          </Tab>
+          <Tab disabled>Tab 3</Tab>
+          <Tab disabled>
+            <button type="button" onClick={console.log}>
+              Tab 1
+            </button>
+          </Tab>
+        </Tabs>
+      </TabsMenu>
+    </>
+  )
 }

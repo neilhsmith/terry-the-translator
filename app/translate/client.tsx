@@ -236,9 +236,11 @@ export function SourceLanguageSelector() {
       <Menu>
         <Menu.Button>Menu</Menu.Button>
         <Menu.Items unmount={false}>
-          <Menu.Item as="span">Item 1</Menu.Item>
-          <Menu.Item as="span">Item 2</Menu.Item>
-          <Menu.Item as="span">Item 3</Menu.Item>
+          <Menu.Item as="button">Item 1</Menu.Item>
+          <Menu.Item disabled as="button">
+            Item 2
+          </Menu.Item>
+          <Menu.Item as="button">Item 3</Menu.Item>
           <Menu.Item as="button" disabled>
             idk
           </Menu.Item>

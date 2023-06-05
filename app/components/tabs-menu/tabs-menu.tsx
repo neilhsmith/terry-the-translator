@@ -414,7 +414,8 @@ export const Tab: TabComponent = forwardRef(function Tab<
       "aria-controls": itemsId,
       "aria-haspopup": "menu" as "menu", // the fallback button wouldn't shutup w/o this as
       "aria-expanded": toggleState === ToggleState.Open,
-      "aria-disabled": disabled,
+      ...(disabled ? { "aria-disabled": true } : {}),
+      tabIndex: disabled ? -1 : 0,
       onFocus: handleHoverOn,
       onMouseEnter: handleHoverOn,
       onBlur: handleHoverOff,

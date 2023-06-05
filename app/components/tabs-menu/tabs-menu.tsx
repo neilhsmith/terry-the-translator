@@ -73,6 +73,16 @@ import { PolymorphicComponentPropsWithRef, PolymorphicRef } from "@/app/types"
 /**
  * TODO:
  * - decide how Tab & Item should work w/ different children types
+ *    - issue: when do we add the aria attributes to the 'wrapper' ele vs 'injecting' them onto the child via cloneElement?
+ *             it gets difficult when considering a ReactElement which could be a span or div wrapping text & an icon
+ *             or it could be a button w/ the expecation that it would become the menuitem and receive the attrs
+ *             so i need to make a decision, implement it, and make sure the docs reflect how it should work
+ *             im thinking that a function child will not render the wrapper ele and will instead inject the attrs onto the child
+ *               unless an as prop is given but will then set role="none" on the wrapper. so this can break if you were to set
+ *               as="button" and then pass a function which returns the menuitem element
+ *    - string/number: render Component w/ ...rest & aria attrs & the children like normal
+ *    - todo: figure out how a function child should work and if the existance of an 'as' prop should affect it
+ *    - todo: figure out how a ReactElement child should work and if the existance of an 'as' prop should affect it
  * - implement keyboard nav
  *    - might be able to remove Tab's close logic in handleClick. the Items useOutsideClick will handle it
  * - don't import 'React' and fix the errors it causes

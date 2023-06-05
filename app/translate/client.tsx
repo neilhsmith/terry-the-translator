@@ -278,7 +278,9 @@ export function SourceLanguageSelector() {
           <Tab>
             <span onClick={console.log}>Tab 2</span>
           </Tab>
-          <Tab disabled>{() => <span>ggg</span>}</Tab>
+          <Tab as="div" disabled>
+            {() => <span>ggg</span>}
+          </Tab>
           <Tab as="div" disabled>
             <button type="button" onClick={console.log}>
               Tab 1

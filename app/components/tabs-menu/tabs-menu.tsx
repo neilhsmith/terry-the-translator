@@ -75,10 +75,12 @@ import { PolymorphicComponentPropsWithRef, PolymorphicRef } from "@/app/types"
  * - test rendering a plain element at each level w/ render props
  *    - i'm pretty sure some wont add the aria attrs they should since they aren't rendered via React.cloneElement
  *    - the Tab component is a good working example
- * - implement the toggle state
- *    - theres mocked close callbacks for render props sprinkled around
+ * - rename MenuContext to StateContext / useStateContext,  useDispatchContext
  * - implement Items and Item
+ *    - might be able to remove the close logic from Tab's handleClick? it just closes any open tab, but this
+ *      functionality will be handled by Items outside click.
  * - implement keyboard nav
+ * - don't import 'React' and fix the errors it causes
  * - return as a compound component
  */
 
@@ -95,7 +97,6 @@ function useOutsideClick<T extends HTMLElement = HTMLElement>(
     const listener = (event: Event) => {
       const el = ref?.current
 
-      // Do nothing if clicking ref's element or descendent elements
       if (!el || el.contains(event.target as Node)) {
         return
       }
@@ -362,7 +363,7 @@ export const Tab: TabComponent = forwardRef(function Tab<
   // need to use the ref to track outside clicks, so create one if not given
   const ref = useRef<HTMLElement>(refProp || null)
 
-  // a tab can overrides the tabs open mode
+  // a tab can overrides the tabs open mode so take the local prop if given
   const actualOpenMode = openMode ?? tabsOpenMode
 
   // we track if the previous click was on this tab for doubleClick mode and reset it on outside clicks. named 'click' but works for touch too
@@ -370,15 +371,6 @@ export const Tab: TabComponent = forwardRef(function Tab<
   useOutsideClick(ref, () => {
     doubleClickActive.current = false
   })
-
-  const handleHoverOn = useCallback(
-    () => dispatch({ type: ActionType.ActivateTab, payload: id }),
-    [dispatch, id]
-  )
-  const handleHoverOff = useCallback(
-    () => dispatch({ type: ActionType.DeactivateTab }),
-    [dispatch]
-  )
 
   const handleClick = useCallback(() => {
     // note: no need to call onClick callbacks or anything as that's spread on via the ...rest already
@@ -405,6 +397,15 @@ export const Tab: TabComponent = forwardRef(function Tab<
     doubleClickActive.current = false
     dispatch({ type: ActionType.Open })
   }, [actualOpenMode, toggleState, dispatch])
+
+  const handleHoverOn = useCallback(
+    () => dispatch({ type: ActionType.ActivateTab, payload: id }),
+    [dispatch, id]
+  )
+  const handleHoverOff = useCallback(
+    () => dispatch({ type: ActionType.DeactivateTab }),
+    [dispatch]
+  )
 
   const sharedAttrs = useMemo(
     () => ({

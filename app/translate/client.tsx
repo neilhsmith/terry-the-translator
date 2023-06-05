@@ -14,7 +14,13 @@ import {
 } from "@/app/translate/provider"
 
 import data from "@/app/translate/data.json"
-import { TabsMenu, Tabs, Tab } from "../components/tabs-menu/tabs-menu"
+import {
+  TabsMenu,
+  Tabs,
+  Tab,
+  Items,
+  Item,
+} from "../components/tabs-menu/tabs-menu"
 import { Menu } from "@headlessui/react"
 const { languages, personalities } = data
 
@@ -241,8 +247,8 @@ export function SourceLanguageSelector() {
             Item 2
           </Menu.Item>
           <Menu.Item as="button">Item 3</Menu.Item>
-          <Menu.Item as="button" disabled>
-            idk
+          <Menu.Item as="div" disabled>
+            {() => <span>idk</span>}
           </Menu.Item>
           <Menu.Item disabled>
             {({ active }) => <button onClick={console.log}>Tab 6</button>}
@@ -262,19 +268,34 @@ export function SourceLanguageSelector() {
       </TabsMenu>
       <TabsMenu>
         <Tabs openMode="doubleClick" aria-label="todo: menubar descrip">
-          <Tab openMode="singleClick" onClick={console.log}>
+          <Tab
+            openMode="singleClick"
+            onClick={console.log}
+            className="bg-black text-white"
+          >
             Tab1
           </Tab>
           <Tab>
-            <button onClick={console.log}>Tab 2</button>
+            <span onClick={console.log}>Tab 2</span>
           </Tab>
-          <Tab disabled>Tab 3</Tab>
-          <Tab disabled>
+          <Tab disabled>{() => <span>ggg</span>}</Tab>
+          <Tab as="div" disabled>
             <button type="button" onClick={console.log}>
               Tab 1
             </button>
           </Tab>
         </Tabs>
+        <Items as="ul" unmount={false}>
+          {/* {({ open }) => <div>item 1 {open.toString()}</div>} */}
+          <Item>item 1</Item>
+          <Item>item 2</Item>
+          <Item as="li" disabled>
+            <button>item 3</button>
+          </Item>
+          <Item as="li">
+            {({ active, open, disabled, close }) => <button>idk</button>}
+          </Item>
+        </Items>
       </TabsMenu>
     </>
   )

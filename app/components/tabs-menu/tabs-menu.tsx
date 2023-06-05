@@ -72,14 +72,9 @@ import { PolymorphicComponentPropsWithRef, PolymorphicRef } from "@/app/types"
 
 /**
  * TODO:
- * - test rendering a plain element at each level w/ render props
- *    - i'm pretty sure some wont add the aria attrs they should since they aren't rendered via React.cloneElement
- *    - the Tab component is a good working example
- * - rename MenuContext to StateContext / useStateContext,  useDispatchContext
- * - implement Items and Item
- *    - might be able to remove the close logic from Tab's handleClick? it just closes any open tab, but this
- *      functionality will be handled by Items outside click.
+ * - decide how Tab & Item should work w/ different children types
  * - implement keyboard nav
+ *    - might be able to remove Tab's close logic in handleClick. the Items useOutsideClick will handle it
  * - don't import 'React' and fix the errors it causes
  * - return as a compound component
  */
@@ -127,28 +122,48 @@ type TabsOpenMode = "singleClick" | "doubleClick"
 
 type MenuState = {
   itemsId: string // the items list id - needed for aria targets across levels
-  activeTabId: string | null // the tab being hovered or focused - for aria-activedescendant
+  tabIds: string[] // the ids of each tab - needed for the item's aria-labelledby
+  activeTabId: string | null // the tab being hovered or focused - for the tab's aria-activedescendant
+  activeItemId: string | null // the item being hovered or focused - for the item's aria-activedescendant
   tabsOpenMode: TabsOpenMode // how many clicks on tab before the menu opens - useful for select then open ux flows
   toggleState: ToggleState // whether the menu is open or closed
 }
 
 enum ActionType {
+  AddTab = "addTab",
+  RemoveTab = "removeTab",
   ActivateTab = "activateTab",
   DeactivateTab = "deactivateTab",
   Open = "open",
   Close = "close",
   SetTabsMode = "setTabsMode",
+  ActivateItem = "activateItem",
+  DeactivateItem = "deactivateItem",
 }
 
 type Actions =
+  | { type: ActionType.AddTab; payload: string }
+  | { type: ActionType.RemoveTab; payload: string }
   | { type: ActionType.ActivateTab; payload: string | null }
   | { type: ActionType.DeactivateTab }
   | { type: ActionType.Open }
   | { type: ActionType.Close }
   | { type: ActionType.SetTabsMode; payload: TabsOpenMode }
+  | { type: ActionType.ActivateItem; payload: string }
+  | { type: ActionType.DeactivateItem }
 
 function menuReducer(state: MenuState, action: Actions) {
   switch (action.type) {
+    case ActionType.AddTab:
+      return {
+        ...state,
+        tabIds: [...state.tabIds, action.payload],
+      }
+    case ActionType.RemoveTab:
+      return {
+        ...state,
+        tabIds: state.tabIds.filter((id) => id !== action.payload),
+      }
     case ActionType.ActivateTab:
       return {
         ...state,
@@ -174,22 +189,32 @@ function menuReducer(state: MenuState, action: Actions) {
         ...state,
         tabsOpenMode: action.payload,
       }
+    case ActionType.ActivateItem:
+      return {
+        ...state,
+        activeItemId: action.payload,
+      }
+    case ActionType.DeactivateItem:
+      return {
+        ...state,
+        activeItemId: null,
+      }
     default:
       return state
   }
 }
 
-const MenuContext = createContext<MenuState | null>(null)
+const StateContext = createContext<MenuState | null>(null)
 const DispatchContext = createContext<Dispatch<Actions> | null>(null)
 
-function useMenuContext(componentName: string) {
-  const context = useContext(MenuContext)
+function useMenuState(componentName: string) {
+  const context = useContext(StateContext)
 
   if (context === null) {
     const error = new Error(
       `<${componentName}> must be used within a <TabsMenu>`
     )
-    if (Error.captureStackTrace) Error.captureStackTrace(error, useMenuContext)
+    if (Error.captureStackTrace) Error.captureStackTrace(error, useMenuState)
 
     throw error
   }
@@ -239,7 +264,9 @@ export const TabsMenu: TabsMenuComponent = forwardRef(function TabsMenu<
   const itemsId = useId("items")
   const [menuState, dispatch] = useReducer(menuReducer, {
     itemsId: itemsId,
+    tabIds: [],
     activeTabId: null,
+    activeItemId: null,
     toggleState: ToggleState.Closed,
     tabsOpenMode: "singleClick",
   })
@@ -247,7 +274,7 @@ export const TabsMenu: TabsMenuComponent = forwardRef(function TabsMenu<
   console.log(menuState)
 
   return (
-    <MenuContext.Provider value={menuState}>
+    <StateContext.Provider value={menuState}>
       <DispatchContext.Provider value={dispatch}>
         <Component ref={ref} {...rest}>
           {typeof children === "function"
@@ -258,13 +285,13 @@ export const TabsMenu: TabsMenuComponent = forwardRef(function TabsMenu<
             : children}
         </Component>
       </DispatchContext.Provider>
-    </MenuContext.Provider>
+    </StateContext.Provider>
   )
 })
 
 // TABS ---------------------------------
 
-const DEFAULT_TABS_TAG = "ul"
+const DEFAULT_TABS_TAG = "div"
 
 type TabsProps = {
   openMode?: TabsOpenMode
@@ -290,7 +317,7 @@ export const Tabs: TabsComponent = forwardRef(function Tabs<
 ) {
   const Component = as || DEFAULT_TABS_TAG
 
-  const { activeTabId, toggleState } = useMenuContext("Tabs")
+  const { activeTabId, toggleState } = useMenuState("Tabs")
   const dispatch = useMenuDispatch("Tabs")
 
   // TODO: wondering if there's a better way to do this than useEffect
@@ -317,13 +344,16 @@ export const Tabs: TabsComponent = forwardRef(function Tabs<
 
 // Tab ---------------------------------
 
-const DEFAULT_TAB_TAG = "li"
+const DEFAULT_TAB_TAG = "button"
 
 type TabProps = {
   disabled?: boolean
   openMode?: "singleClick" | "doubleClick"
   children:
-    | ReactNode
+    | React.ReactElement
+    | string
+    | number
+    | null
     | (({
         active,
         disabled,
@@ -358,7 +388,13 @@ export const Tab: TabComponent = forwardRef(function Tab<
   const id = useId("tab")
   const dispatch = useMenuDispatch("Tab")
   const { activeTabId, itemsId, tabsOpenMode, toggleState } =
-    useMenuContext("Tab")
+    useMenuState("Tab")
+
+  useEffect(() => {
+    dispatch({ type: ActionType.AddTab, payload: id })
+    return () => dispatch({ type: ActionType.RemoveTab, payload: id })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // need to use the ref to track outside clicks, so create one if not given
   const ref = useRef<HTMLElement>(refProp || null)
@@ -433,32 +469,176 @@ export const Tab: TabComponent = forwardRef(function Tab<
     ]
   )
 
-  return (
-    <Component ref={ref} role="none" {...rest}>
-      {typeof children === "function"
-        ? React.cloneElement(
-            children({
-              active: id === activeTabId,
-              disabled,
-              open: toggleState === ToggleState.Open,
-              close: () => dispatch({ type: ActionType.Close }),
-            }),
-            sharedAttrs
-          )
-        : React.Children.map(children, (child, index) => {
-            if (React.isValidElement(child)) {
-              return React.cloneElement(child, {
-                key: index,
-                ...sharedAttrs,
-              })
-            }
+  if (typeof children === "function") {
+    return (
+      <Component ref={ref} role="none" {...rest}>
+        {React.cloneElement(
+          children({
+            active: id === activeTabId,
+            disabled,
+            open: toggleState === ToggleState.Open,
+            close: () => dispatch({ type: ActionType.Close }),
+          }),
+          sharedAttrs
+        )}
+      </Component>
+    )
+  }
 
-            return (
-              <button key={index} type="button" {...sharedAttrs}>
-                {child}
-              </button>
-            )
-          })}
+  return (
+    <Component ref={ref} {...rest} {...sharedAttrs}>
+      {children}
+    </Component>
+  )
+})
+
+// Items ---------------------------------
+
+const DEFAULT_ITEMS_TAG = "div"
+
+type ItemsProps = {
+  children: ReactNode | (({ open }: { open: boolean }) => ReactNode)
+} & (
+  | { static?: boolean; unmount?: undefined }
+  | { static?: undefined; unmount?: boolean }
+)
+
+type ItemsComponent = <C extends React.ElementType = typeof DEFAULT_ITEMS_TAG>(
+  props: PolymorphicComponentPropsWithRef<C, ItemsProps>
+) => React.ReactElement | null
+
+export const Items: ItemsComponent = forwardRef(function Items<
+  C extends React.ElementType = typeof DEFAULT_ITEMS_TAG
+>(
+  {
+    as,
+    children,
+    unmount,
+    static: isStatic,
+    ...rest
+  }: PolymorphicComponentPropsWithRef<C, ItemsProps>,
+  ref?: PolymorphicRef<C>
+) {
+  const Component = as || DEFAULT_ITEMS_TAG
+
+  const { activeItemId, itemsId, tabIds, toggleState } = useMenuState("Items")
+
+  // want to unmount if static is true. otherwise, want to respect the unmount prop or default to true if it wasn't given.
+  const shouldUnmount = !isStatic && (unmount ?? true)
+  if (shouldUnmount && toggleState === ToggleState.Closed) return null
+
+  const shouldHide = !isStatic && toggleState === ToggleState.Closed
+
+  return (
+    <Component
+      ref={ref}
+      id={itemsId}
+      role="menu"
+      aria-labelledby={tabIds.join(" ")}
+      tabIndex={0}
+      {...rest}
+      {...(activeItemId ? { "aria-activedescendant": activeItemId } : {})}
+      {...(shouldHide
+        ? {
+            hidden: true,
+            style: { display: "none" },
+          }
+        : {})}
+    >
+      {typeof children === "function"
+        ? children({ open: toggleState === ToggleState.Open })
+        : children}
+    </Component>
+  )
+})
+
+// Item ---------------------------------
+
+const DEFAULT_ITEM_TAG = "button"
+
+type ItemProps = {
+  disabled?: boolean
+  role?: "none"
+  children:
+    | React.ReactElement
+    | string
+    | number
+    | null
+    | (({
+        active,
+        disabled,
+        open,
+        close,
+      }: {
+        active: boolean
+        disabled: boolean
+        open: boolean
+        close: () => void
+      }) => React.ReactElement) // TODO: add string, number, null to this when i create the type. add to Tab too
+}
+
+type ItemComponent = <C extends React.ElementType = typeof DEFAULT_ITEM_TAG>(
+  props: PolymorphicComponentPropsWithRef<C, ItemProps>
+) => React.ReactElement | null
+
+export const Item: ItemComponent = forwardRef(function Item<
+  C extends React.ElementType = typeof DEFAULT_ITEM_TAG
+>(
+  {
+    as,
+    children,
+    disabled = false,
+    ...rest
+  }: PolymorphicComponentPropsWithRef<C, ItemProps>,
+  ref?: PolymorphicRef<C>
+) {
+  const Component = as || DEFAULT_ITEM_TAG
+
+  const id = useId("item")
+  const dispatch = useMenuDispatch("Item")
+
+  const handleHoverOn = useCallback(
+    () => dispatch({ type: ActionType.ActivateItem, payload: id }),
+    [dispatch, id]
+  )
+  const handleHoverOff = useCallback(
+    () => dispatch({ type: ActionType.DeactivateItem }),
+    [dispatch]
+  )
+
+  const sharedAttrs = useMemo(
+    () => ({
+      id,
+      role: "menuitem" as "menuitem",
+      tabIndex: disabled ? -1 : 0,
+      ...(disabled ? { "aria-disabled": true } : {}),
+      onFocus: handleHoverOn,
+      onMouseEnter: handleHoverOn,
+      onBlur: handleHoverOff,
+      onMouseLeave: handleHoverOff,
+    }),
+    [disabled, id, handleHoverOn, handleHoverOff]
+  )
+
+  if (typeof children === "function") {
+    return (
+      <Component ref={ref} role="none" {...rest}>
+        {React.cloneElement(
+          children({
+            active: true,
+            disabled: true,
+            open: true,
+            close: () => {},
+          }),
+          sharedAttrs
+        )}
+      </Component>
+    )
+  }
+
+  return (
+    <Component ref={ref} {...rest} {...sharedAttrs}>
+      {children}
     </Component>
   )
 })
